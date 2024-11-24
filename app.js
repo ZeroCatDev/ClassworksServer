@@ -94,7 +94,7 @@ app.get("/download", async (req, res) => {
     });
   }
 });
-app.get("/config", async (req, res) => {
+app.get("/config.json", async (req, res) => {
   res.json({
     "//": "学生名字列表(推荐按学号顺序排列)除最后一项外，每个学生姓名后面必须加一个逗号",
     "//": "如果不需要“出勤”功能，请把下面“:”后面的“[]”中的内容删除即可",
