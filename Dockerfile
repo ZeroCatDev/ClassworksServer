@@ -1,5 +1,6 @@
-FROM node:20-alpine3.16
+FROM node:alpine
 LABEL author=wuyuan
+RUN apk add --no-cache openssl
 COPY . /
 RUN npm install
 EXPOSE 3000
