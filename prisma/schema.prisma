@@ -8,13 +8,19 @@ datasource db {
 }
 
 model homework {
-  date      String   @id @db.VarChar(10)
+  class     String   @db.VarChar(45)
+  date      String   @db.VarChar(10)
   data      Json
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
+
+  @@id([date, class])
 }
 
 model config {
-  id      Int    @id @default(autoincrement())
+  id      Int    @default(autoincrement())
+  class   String @db.VarChar(45)
   student String @db.MediumText
+
+  @@id([id, class])
 }
