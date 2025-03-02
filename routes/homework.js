@@ -57,11 +57,7 @@ router.get("/:classId/homework", async (req, res) => {
       throw new Error("该日期未上传数据");
     }
 
-    res.json({
-      status: true,
-      msg: "获取成功",
-      ...homework.data,
-    });
+    res.json(homework.data);
   } catch (error) {
     console.error("Download error:", error);
     res.json({
@@ -71,31 +67,22 @@ router.get("/:classId/homework", async (req, res) => {
   }
 });
 
-// 获取班级配置信息
+// 获取班级配置
 router.get("/:classId/config", async (req, res) => {
-  const className = req.params.classId;
-  var studentList = [];
-  
   try {
-    const config = await prisma.config.findFirst({ 
+    const className = req.params.classId;
+    
+    const config = await prisma.config.findUnique({
       where: { 
-        id: 1,
         class: className
-      } 
+      }
     });
     
-    if (config) {
-      studentList = config.student.split(",");
+    if (!config) {
+      throw new Error("未找到配置信息");
     }
     
-    res.json({
-      studentList: studentList,
-      homeworkArrange: [
-        ["语文", "数学", "英语"],
-        ["物理", "化学", "生物"],
-        ["政治", "历史", "地理"],
-      ],
-    });
+    res.json(config.value);
   } catch (error) {
     console.error("Config error:", error);
     res.json({
@@ -105,27 +92,23 @@ router.get("/:classId/config", async (req, res) => {
   }
 });
 
-// 更新班级学生列表
-router.put("/:classId/students", async (req, res) => {
+// 更新班级配置
+router.put("/:classId/config", async (req, res) => {
   try {
     const className = req.params.classId;
-    const studentList = req.body.studentList.join(",");
+    const configValue = req.body;
     
     await prisma.config.upsert({
       where: {
-        id_class: {
-          id: req.body.id,
-          class: className
-        }
+        class: className
       },
       update: {
-        student: studentList,
+        value: configValue
       },
       create: {
-        id: req.body.id,
         class: className,
-        student: studentList,
-      },
+        value: configValue
+      }
     });
 
     res.json({
@@ -133,7 +116,7 @@ router.put("/:classId/students", async (req, res) => {
       msg: "更新成功"
     });
   } catch (error) {
-    console.error("SetStudentList error:", error);
+    console.error("Config update error:", error);
     res.json({
       status: false,
       msg: "更新失败：" + error.message,

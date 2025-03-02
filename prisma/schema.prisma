@@ -18,9 +18,6 @@ model homework {
 }
 
 model config {
-  id      Int    @default(autoincrement())
-  class   String @db.VarChar(45)
-  student String @db.MediumText
-
-  @@id([id, class])
+  class String @id @db.VarChar(45)
+  value Json?
 }

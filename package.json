@@ -5,7 +5,9 @@
   "scripts": {
     "start": "node ./bin/www",
     "prisma": "prisma generate",
-    "prisma:pull": "prisma db pull"
+    "prisma:pull": "prisma db pull",
+    "dev": "NODE_ENV=development nodemon node .bin/www"
+
   },
   "dependencies": {
     "@prisma/client": "6.4.1",
