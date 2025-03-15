@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 // 上传/更新作业数据
 router.post("/:classId/homework", async (req, res) => {
   try {
-    const date = new Date().toISOString().split("T")[0];
+    const date = req.query.date || new Date().toISOString().split("T")[0];
     const data = req.body;
     const className = req.params.classId;
 
@@ -71,17 +71,17 @@ router.get("/:classId/homework", async (req, res) => {
 router.get("/:classId/config", async (req, res) => {
   try {
     const className = req.params.classId;
-    
+
     const config = await prisma.config.findUnique({
-      where: { 
+      where: {
         class: className
       }
     });
-    
+
     if (!config) {
       throw new Error("未找到配置信息");
     }
-    
+
     res.json(config.value);
   } catch (error) {
     console.error("Config error:", error);
@@ -97,7 +97,7 @@ router.put("/:classId/config", async (req, res) => {
   try {
     const className = req.params.classId;
     const configValue = req.body;
-    
+
     await prisma.config.upsert({
       where: {
         class: className

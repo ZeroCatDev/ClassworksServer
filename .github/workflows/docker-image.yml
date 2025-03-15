@@ -36,7 +36,7 @@ jobs:
         with:
           images: |
             sunwuyuan/homeworkpage
-            ghcr.io/sunwuyuan/homeworkpage
+            ghcr.io/ClassworksDev/ClassworksServer
           tags: |
             type=sha
           flavor: |
