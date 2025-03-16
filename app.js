@@ -36,7 +36,7 @@ const prisma = new PrismaClient();
 // 使用路由
 app.get("/api/test", (req, res) => {
   res.json({
-    status: true,
+    status: "success",
     message: "成功",
     time: new Date().getTime(),
   });
