@@ -34,6 +34,13 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 // 使用路由
+app.get("/api/test", (req, res) => {
+  res.json({
+    status: true,
+    message: "成功",
+    time: new Date().getTime(),
+  });
+});
 app.use("/", homeworkRouter);
 app.use("/users", usersRouter);
 
