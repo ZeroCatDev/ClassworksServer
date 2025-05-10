@@ -60,6 +60,13 @@ app.use((req, res, next) => {
 app.get("/", (req, res) => {
   res.render("index.ejs", { readmeValue: getReadmeValue() });
 });
+app.get("/check", (req, res) => {
+  res.json({
+    status: "success",
+    message: "API is running",
+    time: new Date().getTime(),
+  });
+});
 
 // Mount the KV store router
 app.use("/", kvRouter);
