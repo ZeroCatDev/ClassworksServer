@@ -21,3 +21,14 @@ model config {
   class String @id @db.VarChar(45)
   value Json?
 }
+
+model KVStore {
+  namespace  String     @db.Char(36)
+  key        String
+  value      Json
+  creatorIp  String?    @default("")
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@id([namespace, key])
+}

@@ -4,22 +4,22 @@
  * Module dependencies.
  */
 
-var app = require('../app');
-var debug = require('debug')('serverexpress:server');
-var http = require('http');
+import app from '../app.js';
+import debug from 'debug';
+import { createServer } from 'http';
 
 /**
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '3030');
-app.set('port', port);
+var port = normalizePort(process.env.PORT || "3030");
+app.set("port", port);
 
 /**
  * Create HTTP server.
  */
 
-var server = http.createServer(app);
+var server = createServer(app);
 
 /**
  * Listen on provided port, on all network interfaces.
@@ -85,6 +85,6 @@ function onListening() {
   var addr = server.address();
   var bind = typeof addr === 'string'
     ? 'pipe ' + addr
-    : 'port ' + addr.port;
-  debug('Listening on ' + bind);
+    : "port " + addr.port;
+  debug("Listening on " + bind);
 }

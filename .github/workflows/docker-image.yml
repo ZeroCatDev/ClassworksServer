@@ -35,7 +35,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            sunwuyuan/homeworkpage
+            sunwuyuan/classworks
             ghcr.io/ClassworksDev/ClassworksServer
           tags: |
             type=sha
