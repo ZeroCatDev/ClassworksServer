@@ -6,7 +6,6 @@ import logger from "morgan";
 import bodyParser from "body-parser";
 import errorHandler from "./middleware/errorHandler.js";
 import errors from "./utils/errors.js";
-import kvStore from "./models/kvStore.js";
 import { initReadme, getReadmeValue } from "./utils/siteinfo.js";
 
 import kvRouter from "./routes/kv.js";
@@ -59,28 +58,9 @@ app.use((req, res, next) => {
 app.get("/", (req, res) => {
   res.render("index.ejs", { readmeValue: getReadmeValue() });
 });
-// API test endpoint
-app.get(
-  "/api/test",
-  errors.catchAsync((req, res) => {
-    res.json({
-      status: "success",
-      message: "API is running",
-      time: new Date().getTime(),
-    });
-  })
-);
 
 // Mount the KV store router
-app.use("/api/kv", kvRouter);
-
-// Test view
-app.get(
-  "/test",
-  errors.catchAsync(async (req, res) => {
-    res.render("test.ejs");
-  })
-);
+app.use("/", kvRouter);
 
 // 兜底404路由 - 处理所有未匹配的路由
 app.use((req, res, next) => {

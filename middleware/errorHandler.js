@@ -1,8 +1,3 @@
-/**
- * 全局错误处理中间件
- * 简化版本 - 统一错误响应格式
- */
-import errors from "../utils/errors.js";
 import { isDevelopment } from "../config.js";
 
 const errorHandler = (err, req, res, next) => {
