@@ -1,7 +1,8 @@
-import createError from "http-errors";
+// import createError from "http-errors";
 import express from "express";
-import { join } from "path";
-import cookieParser from "cookie-parser";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+// import cookieParser from "cookie-parser";
 import logger from "morgan";
 import bodyParser from "body-parser";
 import errorHandler from "./middleware/errorHandler.js";
@@ -16,22 +17,23 @@ import cors from "cors";
 app.options("*", cors());
 app.use(cors());
 
-//全局变量
-global.dirname = import.meta.dirname;
+// 获取当前文件的目录路径
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // 初始化 readme
 initReadme();
 
 // view engine setup
-app.set("views", join(dirname, "views"));
+app.set("views", join(__dirname, "views"));
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(join(dirname, "public")));
+// app.use(cookieParser());
+// app.use(express.static(join(__dirname, "public")));
 
 // 添加请求超时处理中间件
 app.use((req, res, next) => {
