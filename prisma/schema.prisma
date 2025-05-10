@@ -7,21 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model homework {
-  class     String   @db.VarChar(45)
-  date      String   @db.VarChar(10)
-  data      Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
-
-  @@id([date, class])
-}
-
-model config {
-  class String @id @db.VarChar(45)
-  value Json?
-}
-
 model KVStore {
   namespace  String     @db.Char(36)
   key        String
