@@ -143,6 +143,58 @@ router.post(
 );
 
 /**
+ * POST /:namespace/batch-import
+ * 批量导入键值对到指定命名空间
+ */
+router.post(
+  "/:namespace/import/batch-import",
+  checkRestrictedUUID,
+  errors.catchAsync(async (req, res, next) => {
+    const { namespace } = req.params;
+    const data = req.body;
+
+    if (!data || Object.keys(data).length === 0) {
+      return next(errors.createError(400, "请提供有效的JSON数据，格式为 {\"key\":{}, \"key2\":{}}"));
+    }
+
+    // 获取客户端IP
+    const creatorIp =
+      req.headers["x-forwarded-for"] ||
+      req.connection.remoteAddress ||
+      req.socket.remoteAddress ||
+      req.connection.socket?.remoteAddress ||
+      "";
+
+    const results = [];
+    const errors = [];
+
+    // 批量处理所有键值对
+    for (const [key, value] of Object.entries(data)) {
+      try {
+        const result = await kvStore.upsert(namespace, key, value, creatorIp);
+        results.push({
+          key: result.key,
+          created: result.createdAt.getTime() === result.updatedAt.getTime()
+        });
+      } catch (error) {
+        errors.push({
+          key,
+          error: error.message
+        });
+      }
+    }
+
+    return res.status(200).json({
+      namespace,
+      total: Object.keys(data).length,
+      successful: results.length,
+      failed: errors.length,
+      results,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  })
+);
+/**
  * DELETE /:namespace
  * 删除指定命名空间及其所有键值对
  */
@@ -200,5 +252,6 @@ router.get(
     res.json({ namespace });
   })
 );
+
 
 export default router;

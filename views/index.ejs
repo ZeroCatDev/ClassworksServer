@@ -7,7 +7,51 @@
   <title>
     <%= readmeValue.title || "Classworks 服务端" %>
   </title>
-  <link rel="stylesheet" href="/stylesheets/style.css">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .readme-content {
+      background-color: #f5f5f5;
+      padding: 20px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+    .form-section {
+      background-color: #f0f8ff;
+      padding: 20px;
+      border-radius: 5px;
+      margin-top: 30px;
+    }
+    textarea {
+      width: 100%;
+      height: 200px;
+      margin-bottom: 10px;
+      font-family: monospace;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    #response {
+      white-space: pre-wrap;
+      background-color: #f5f5f5;
+      padding: 15px;
+      border-radius: 5px;
+      margin-top: 20px;
+      font-family: monospace;
+    }
+  </style>
 </head>
 
 <body>
@@ -19,6 +63,69 @@
     <pre><%= readmeValue.readme %></pre>
   </div>
 
+  <div class="form-section">
+    <h2>批量数据导入测试</h2>
+    <form id="batchImportForm">
+      <div>
+        <label for="namespace">命名空间:</label>
+        <input type="text" id="namespace" name="namespace" placeholder="输入命名空间" required>
+        <button type="button" id="generateUUID">生成UUID</button>
+      </div>
+      <div>
+        <label for="data">JSON数据 (格式: {"key":{}, "key2":{}})</label>
+        <textarea id="data" name="data" placeholder='{"key1": {"value": "test1"}, "key2": {"value": "test2"}}' required></textarea>
+      </div>
+      <button type="submit">导入数据</button>
+    </form>
+    <div>
+      <h3>响应结果:</h3>
+      <pre id="response"></pre>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('generateUUID').addEventListener('click', async function() {
+      try {
+        const response = await fetch('/uuid', {
+          method: 'GET'
+        });
+        const data = await response.json();
+        document.getElementById('namespace').value = data.namespace;
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('response').textContent = '获取UUID失败: ' + error.message;
+      }
+    });
+
+    document.getElementById('batchImportForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const namespace = document.getElementById('namespace').value;
+      let jsonData;
+
+      try {
+        jsonData = JSON.parse(document.getElementById('data').value);
+      } catch (error) {
+        document.getElementById('response').textContent = 'JSON解析错误: ' + error.message;
+        return;
+      }
+
+      try {
+        const response = await fetch(`/${namespace}/batch-import`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(jsonData)
+        });
+
+        const result = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(result, null, 2);
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('response').textContent = '请求失败: ' + error.message;
+      }
+    });
+  </script>
 </body>
 
 </html>
