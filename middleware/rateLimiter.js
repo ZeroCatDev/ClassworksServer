@@ -73,8 +73,8 @@ export const authLimiter = rateLimit({
 
 // 批量操作限速器（比写操作更严格）
 export const batchLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5分钟
-  limit: 5, // 每个IP在windowMs时间内最多允许5个批量操作
+  windowMs: 1 * 60 * 1000, // 5分钟
+  limit: 10, // 每个IP在windowMs时间内最多允许5个批量操作
   standardHeaders: "draft-7",
   legacyHeaders: false,
   message: "批量操作请求过于频繁，请稍后再试",
