@@ -20,10 +20,11 @@ import kvRouter from "./routes/kv.js";
 var app = express();
 
 import cors from "cors";
-app.options("*", cors());
+app.options("/{*path}", cors());
 app.use(
   cors({
     exposedHeaders: ["ratelimit-policy", "retry-after", "ratelimit"], // 告诉浏览器这些响应头可以暴露
+    maxAge: 86400, // 设置OPTIONS请求的结果缓存24小时(86400秒)，减少预检请求
   })
 );
 app.disable("x-powered-by");
