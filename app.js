@@ -1,3 +1,4 @@
+import "./instrumentation.js";
 // import createError from "http-errors";
 import express from "express";
 import { join, dirname } from "path";
@@ -8,6 +9,11 @@ import bodyParser from "body-parser";
 import errorHandler from "./middleware/errorHandler.js";
 import errors from "./utils/errors.js";
 import { initReadme, getReadmeValue } from "./utils/siteinfo.js";
+import {
+  globalLimiter,
+  apiLimiter,
+  methodBasedRateLimiter,
+} from "./middleware/rateLimiter.js";
 
 import kvRouter from "./routes/kv.js";
 
@@ -15,7 +21,12 @@ var app = express();
 
 import cors from "cors";
 app.options("*", cors());
-app.use(cors());
+app.use(
+  cors({
+    exposedHeaders: ["ratelimit-policy", "retry-after", "ratelimit"], // 告诉浏览器这些响应头可以暴露
+  })
+);
+app.disable("x-powered-by");
 
 // 获取当前文件的目录路径
 const __filename = fileURLToPath(import.meta.url);
@@ -23,6 +34,9 @@ const __dirname = dirname(__filename);
 
 // 初始化 readme
 initReadme();
+
+// 应用全局限速
+app.use(globalLimiter);
 
 // view engine setup
 app.set("views", join(__dirname, "views"));
@@ -60,7 +74,7 @@ app.use((req, res, next) => {
 app.get("/", (req, res) => {
   res.render("index.ejs", { readmeValue: getReadmeValue() });
 });
-app.get("/check", (req, res) => {
+app.get("/check", apiLimiter, (req, res) => {
   res.json({
     status: "success",
     message: "API is running",
@@ -68,8 +82,8 @@ app.get("/check", (req, res) => {
   });
 });
 
-// Mount the KV store router
-app.use("/", kvRouter);
+// Mount the KV store router with method-based rate limiting
+app.use("/", methodBasedRateLimiter, kvRouter);
 
 // 兜底404路由 - 处理所有未匹配的路由
 app.use((req, res, next) => {
