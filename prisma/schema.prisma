@@ -17,3 +17,12 @@ model KVStore {
 
   @@id([namespace, key])
 }
+
+model Device {
+  uuid       String     @id @db.Char(36)
+  password   String?
+  name       String?
+  accessType String     @default("NO_PASSWORD_WRITABLE")
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}

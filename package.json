@@ -21,7 +21,7 @@
     "@opentelemetry/sdk-node": "^0.200.0",
     "@opentelemetry/sdk-trace-base": "^2.0.0",
     "@opentelemetry/semantic-conventions": "^1.33.0",
-    "@prisma/client": "6.7.0",
+    "@prisma/client": "6.8.2",
     "axios": "^1.9.0",
     "body-parser": "^2.2.0",
     "cookie-parser": "~1.4.4",
@@ -36,6 +36,6 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "prisma": "6.7.0"
+    "prisma": "6.8.2"
   }
 }

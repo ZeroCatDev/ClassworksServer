@@ -1,9 +1,13 @@
 import { Router } from "express";
 const router = Router();
 import kvStore from "../models/kvStore.js";
-import checkSiteKey from "../middleware/auth.js";
+import { checkSiteKey } from "../middleware/auth.js";
 import { v4 as uuidv4 } from "uuid";
 import errors from "../utils/errors.js";
+import { PrismaClient } from "@prisma/client";
+import { readAuthMiddleware, writeAuthMiddleware } from "../middleware/auth.js";
+
+const prisma = new PrismaClient();
 
 // 检查是否为受限UUID的中间件
 const checkRestrictedUUID = (req, res, next) => {
@@ -17,6 +21,83 @@ const checkRestrictedUUID = (req, res, next) => {
 };
 
 router.use(checkSiteKey);
+
+// Get device info
+router.get(
+  "/:namespace/_info",
+  readAuthMiddleware,
+  errors.catchAsync(async (req, res) => {
+    try {
+      const { device } = req;
+      res.json({
+        uuid: device.uuid,
+        name: device.name,
+        accessType: device.accessType,
+        hasPassword: !!device.password,
+      });
+    } catch (error) {
+      console.error("Error getting device info:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  })
+);
+
+// Update device password
+router.post(
+  "/:namespace/_password",
+  writeAuthMiddleware,
+  errors.catchAsync(async (req, res) => {
+    const { newPassword, oldPassword } = req.body;
+    const { device } = req;
+
+    try {
+      if (device.password && oldPassword !== device.password) {
+        return res.status(401).json({ error: "Invalid old password" });
+      }
+
+      await prisma.device.update({
+        where: { uuid: device.uuid },
+        data: { password: newPassword },
+      });
+
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Error updating password:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  })
+);
+
+// Update device info
+router.put(
+  "/:namespace/_info",
+  writeAuthMiddleware,
+  errors.catchAsync(async (req, res) => {
+    const { name, accessType } = req.body;
+    const { device } = req;
+
+    try {
+      const updatedDevice = await prisma.device.update({
+        where: { uuid: device.uuid },
+        data: {
+          name: name || device.name,
+          accessType: accessType || device.accessType,
+        },
+      });
+
+      res.json({
+        uuid: updatedDevice.uuid,
+        name: updatedDevice.name,
+        accessType: updatedDevice.accessType,
+        hasPassword: !!updatedDevice.password,
+      });
+    } catch (error) {
+      console.error("Error updating device info:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  })
+);
+
 /**
  * GET /:namespace
  * 获取指定命名空间下的所有键名及元数据列表
@@ -72,6 +153,7 @@ router.get(
 router.get(
   "/:namespace/:key",
   checkRestrictedUUID,
+  readAuthMiddleware,
   errors.catchAsync(async (req, res, next) => {
     const { namespace, key } = req.params;
 
@@ -94,6 +176,7 @@ router.get(
 router.get(
   "/:namespace/:key/metadata",
   checkRestrictedUUID,
+  readAuthMiddleware,
   errors.catchAsync(async (req, res, next) => {
     const { namespace, key } = req.params;
     const metadata = await kvStore.getMetadata(namespace, key);
@@ -115,6 +198,7 @@ router.get(
 router.post(
   "/:namespace/:key",
   checkRestrictedUUID,
+  writeAuthMiddleware,
   errors.catchAsync(async (req, res, next) => {
     const { namespace, key } = req.params;
     const value = req.body;
@@ -147,14 +231,19 @@ router.post(
  * 批量导入键值对到指定命名空间
  */
 router.post(
-  "/:namespace/import/batch-import",
+  "/:namespace/_batchimport",
   checkRestrictedUUID,
   errors.catchAsync(async (req, res, next) => {
     const { namespace } = req.params;
     const data = req.body;
 
     if (!data || Object.keys(data).length === 0) {
-      return next(errors.createError(400, "请提供有效的JSON数据，格式为 {\"key\":{}, \"key2\":{}}"));
+      return next(
+        errors.createError(
+          400,
+          '请提供有效的JSON数据，格式为 {"key":{}, "key2":{}}'
+        )
+      );
     }
 
     // 获取客户端IP
@@ -174,12 +263,12 @@ router.post(
         const result = await kvStore.upsert(namespace, key, value, creatorIp);
         results.push({
           key: result.key,
-          created: result.createdAt.getTime() === result.updatedAt.getTime()
+          created: result.createdAt.getTime() === result.updatedAt.getTime(),
         });
       } catch (error) {
         errors.push({
           key,
-          error: error.message
+          error: error.message,
         });
       }
     }
@@ -190,7 +279,7 @@ router.post(
       successful: results.length,
       failed: errors.length,
       results,
-      errors: errors.length > 0 ? errors : undefined
+      errors: errors.length > 0 ? errors : undefined,
     });
   })
 );
@@ -252,6 +341,5 @@ router.get(
     res.json({ namespace });
   })
 );
-
 
 export default router;
