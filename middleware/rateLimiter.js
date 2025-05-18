@@ -26,7 +26,7 @@ export const globalLimiter = rateLimit({
 // API限速器
 export const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1分钟
-  limit: 20, // 每个IP在windowMs时间内最多允许20个请求
+  limit: 50, // 每个IP在windowMs时间内最多允许50个请求
   standardHeaders: "draft-7",
   legacyHeaders: false,
   message: "API请求过于频繁，请稍后再试",
@@ -38,7 +38,7 @@ export const apiLimiter = rateLimit({
 // 写操作限速器（更严格）
 export const writeLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1分钟
-  limit: 10, // 每个IP在windowMs时间内最多允许10个写操作
+  limit: 20, // 每个IP在windowMs时间内最多允许20个写操作
   standardHeaders: "draft-7",
   legacyHeaders: false,
   message: "写操作请求过于频繁，请稍后再试",
@@ -50,7 +50,7 @@ export const writeLimiter = rateLimit({
 // 删除操作限速器（最严格）
 export const deleteLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 5分钟
-  limit: 1, // 每个IP在windowMs时间内最多允许5个删除操作
+  limit: 10, // 每个IP在windowMs时间内最多允许10个删除操作
   standardHeaders: "draft-7",
   legacyHeaders: false,
   message: "删除操作请求过于频繁，请稍后再试",
@@ -74,7 +74,7 @@ export const authLimiter = rateLimit({
 // 批量操作限速器（比写操作更严格）
 export const batchLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 5分钟
-  limit: 10, // 每个IP在windowMs时间内最多允许5个批量操作
+  limit: 10, // 每个IP在windowMs时间内最多允许10个批量操作
   standardHeaders: "draft-7",
   legacyHeaders: false,
   message: "批量操作请求过于频繁，请稍后再试",

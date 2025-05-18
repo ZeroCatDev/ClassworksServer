@@ -1,120 +1,221 @@
 import { siteKey } from "../config.js";
 import AppError from "../utils/errors.js";
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export const ACCESS_TYPES = {
-  NO_PASSWORD_WRITABLE: 'NO_PASSWORD_WRITABLE',
-  NO_PASSWORD_READABLE: 'NO_PASSWORD_READABLE',
-  NO_PASSWORD_UNREADABLE: 'NO_PASSWORD_UNREADABLE'
+  PUBLIC: "PUBLIC",
+  PROTECTED: "PROTECTED",
+  PRIVATE: "PRIVATE",
 };
 
 export const checkSiteKey = (req, res, next) => {
-    const providedKey = req.headers['x-site-key'];
+  if (!siteKey) {
+    return next();
+  }
 
-    if (!siteKey) {
-        return next();
-    }
+  const providedKey =
+    req.headers["x-site-key"] || req.query.sitekey || req.body?.sitekey;
+  if (!providedKey || providedKey !== siteKey) {
+    return res.status(401).json({
+      statusCode: 401,
+      message: "此服务器已开启站点密钥验证，请提供有效的站点密钥",
+    });
+  }
 
-    if (!providedKey || providedKey !== siteKey) {
-        const error = AppError.createError(
-            AppError.HTTP_STATUS.UNAUTHORIZED,
-            "此服务器已开启站点密钥验证，请在请求头中添加 x-site-key 以继续访问"
-        );
-        return res.status(error.statusCode).json(error);
-    }
-
-    next();
+  next();
 };
 
 async function getOrCreateDevice(uuid, className) {
+  try {
     let device = await prisma.device.findUnique({
-        where: { uuid }
+      where: { uuid },
     });
 
     if (!device) {
+      try {
         device = await prisma.device.create({
-            data: {
-                uuid,
-                name: className || null,
-                accessType: ACCESS_TYPES.NO_PASSWORD_WRITABLE
-            }
+          data: {
+            uuid,
+            name: className || null,
+            accessType: ACCESS_TYPES.PUBLIC,
+          },
         });
+      } catch (error) {
+        // 如果是唯一约束错误（并发创建），重新获取设备
+        if (error.code === "P2002") {
+          device = await prisma.device.findUnique({
+            where: { uuid },
+          });
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    // 如果设备没有密码，自动设为public
+    if (
+      device &&
+      !device.password &&
+      device.accessType !== ACCESS_TYPES.PUBLIC
+    ) {
+      device = await prisma.device.update({
+        where: { uuid },
+        data: { accessType: ACCESS_TYPES.PUBLIC },
+      });
     }
 
     return device;
-}
-
-async function validatePassword(device, password) {
-    if (!device.password) return true;
-    return device.password === password;
+  } catch (error) {
+    console.error("Error in getOrCreateDevice:", error);
+    throw error;
+  }
 }
 
 export const authMiddleware = async (req, res, next) => {
-    const { namespace } = req.params;
-    const { password } = req.body;
+  const { namespace } = req.params;
+  const password =
+    req.headers["x-namespace-password"] ||
+    req.query.password ||
+    req.body?.password;
 
-    try {
-        const device = await getOrCreateDevice(namespace, req.body.className);
-        req.device = device;
+  try {
+    const device = await getOrCreateDevice(namespace, req.body?.className);
+    req.device = device;
 
-        if (device.password && !await validatePassword(device, password)) {
-            return res.status(401).json({ error: 'Invalid password' });
-        }
-
-        next();
-    } catch (error) {
-        console.error('Auth middleware error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+    if (device.password && password !== device.password) {
+      return res.status(401).json({
+        statusCode: 401,
+        message: "设备密码验证失败",
+      });
     }
+
+    next();
+  } catch (error) {
+    console.error("Auth middleware error:", error);
+    res.status(500).json({
+      statusCode: 500,
+      message: "服务器内部错误",
+    });
+  }
 };
 
 export const readAuthMiddleware = async (req, res, next) => {
-    const { namespace } = req.params;
+  const { namespace } = req.params;
+  const password =
+    req.headers["x-namespace-password"] ||
+    req.query.password ||
+    req.body?.password;
 
-    try {
-        const device = await getOrCreateDevice(namespace);
-        req.device = device;
+  try {
+    const device = await getOrCreateDevice(namespace);
+    res.locals.device = device;
 
-        if (device.accessType === ACCESS_TYPES.NO_PASSWORD_UNREADABLE) {
-            return res.status(403).json({ error: 'Device is not readable' });
-        }
-
-        if (device.accessType === ACCESS_TYPES.NO_PASSWORD_READABLE) {
-            return next();
-        }
-
-        if (device.password) {
-            const { password } = req.body;
-            if (!await validatePassword(device, password)) {
-                return res.status(401).json({ error: 'Invalid password' });
-            }
-        }
-
-        next();
-    } catch (error) {
-        console.error('Read auth middleware error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+    // PUBLIC and PROTECTED devices are always readable
+    if ([ACCESS_TYPES.PUBLIC, ACCESS_TYPES.PROTECTED].includes(device.accessType)) {
+      return next();
     }
+
+    // For PRIVATE devices, require password
+    if (!device.password || password !== device.password) {
+      return res.status(401).json({
+        statusCode: 401,
+        message: "设备密码验证失败",
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error("Read auth middleware error:", error);
+    res.status(500).json({
+      statusCode: 500,
+      message: "服务器内部错误",
+    });
+  }
 };
 
 export const writeAuthMiddleware = async (req, res, next) => {
-    const { namespace } = req.params;
+  const { namespace } = req.params;
+  const password =
+    req.headers["x-namespace-password"] ||
+    req.query.password ||
+    req.body?.password;
 
-    try {
-        const device = await getOrCreateDevice(namespace);
-        req.device = device;
+  try {
+    const device = await getOrCreateDevice(namespace);
+    res.locals.device = device;
 
-        if (device.password) {
-            const { password } = req.body;
-            if (!await validatePassword(device, password)) {
-                return res.status(401).json({ error: 'Invalid password' });
-            }
-        }
-
-        next();
-    } catch (error) {
-        console.error('Write auth middleware error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+    // PUBLIC devices are always writable
+    if (device.accessType === ACCESS_TYPES.PUBLIC) {
+      return next();
     }
+
+    // For PROTECTED and PRIVATE devices, require password
+    if (!device.password || password !== device.password) {
+      return res.status(401).json({
+        statusCode: 401,
+        message: "设备密码验证失败",
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error("Write auth middleware error:", error);
+    res.status(500).json({
+      statusCode: 500,
+      message: "服务器内部错误",
+    });
+  }
+};
+
+export const removePasswordMiddleware = async (req, res, next) => {
+  const { namespace } = req.params;
+  const password =
+    req.headers["x-namespace-password"] ||
+    req.query.password ||
+    req.body?.password;
+  const providedKey =
+    req.headers["x-site-key"] || req.query.sitekey || req.body?.sitekey;
+
+  try {
+    const device = await getOrCreateDevice(namespace);
+    req.device = device;
+
+    // 验证站点令牌（如果设置了的话）
+    if (siteKey && (!providedKey || providedKey !== siteKey)) {
+      return res.status(401).json({
+        statusCode: 401,
+        message: "此服务器已开启站点密钥验证，请提供有效的站点密钥",
+      });
+    }
+
+    // 验证设备密码
+    if (device.password) {
+      if (!password || password !== device.password) {
+        return res.status(401).json({
+          statusCode: 401,
+          message: "设备密码验证失败",
+        });
+      }
+    } else {
+      return res.status(400).json({
+        statusCode: 400,
+        message: "设备当前没有设置密码",
+      });
+    }
+
+    // 更新设备，移除密码
+    await prisma.device.update({
+      where: { uuid: namespace },
+      data: { password: null },
+    });
+
+    res.json({ message: "密码已成功移除" });
+  } catch (error) {
+    console.error("Remove password middleware error:", error);
+    res.status(500).json({
+      statusCode: 500,
+      message: "服务器内部错误",
+    });
+  }
 };

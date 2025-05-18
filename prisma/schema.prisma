@@ -7,6 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AccessType {
+  PUBLIC    // No password required for read/write
+  PROTECTED // No password for read, password for write
+  PRIVATE   // Password required for read/write
+}
+
 model KVStore {
   namespace  String     @db.Char(36)
   key        String
@@ -22,7 +28,7 @@ model Device {
   uuid       String     @id @db.Char(36)
   password   String?
   name       String?
-  accessType String     @default("NO_PASSWORD_WRITABLE")
+  accessType AccessType @default(PUBLIC)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 }

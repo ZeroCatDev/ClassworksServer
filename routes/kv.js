@@ -5,9 +5,16 @@ import { checkSiteKey } from "../middleware/auth.js";
 import { v4 as uuidv4 } from "uuid";
 import errors from "../utils/errors.js";
 import { PrismaClient } from "@prisma/client";
-import { readAuthMiddleware, writeAuthMiddleware } from "../middleware/auth.js";
+import {
+  readAuthMiddleware,
+  writeAuthMiddleware,
+  removePasswordMiddleware,
+} from "../middleware/auth.js";
 
 const prisma = new PrismaClient();
+
+// 定义有效的访问类型
+const VALID_ACCESS_TYPES = ["PUBLIC", "PROTECTED", "PRIVATE"];
 
 // 检查是否为受限UUID的中间件
 const checkRestrictedUUID = (req, res, next) => {
@@ -25,20 +32,45 @@ router.use(checkSiteKey);
 // Get device info
 router.get(
   "/:namespace/_info",
+  checkRestrictedUUID,
   readAuthMiddleware,
   errors.catchAsync(async (req, res) => {
-    try {
-      const { device } = req;
-      res.json({
-        uuid: device.uuid,
-        name: device.name,
-        accessType: device.accessType,
-        hasPassword: !!device.password,
+    const device = res.locals.device;
+    if (!device) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: "设备不存在",
       });
-    } catch (error) {
-      console.error("Error getting device info:", error);
-      res.status(500).json({ error: "Internal server error" });
     }
+    res.json({
+      uuid: device.uuid,
+      name: device.name,
+      accessType: device.accessType,
+      hasPassword: !!device.password,
+    });
+  })
+);
+
+// Get device info
+router.get(
+  "/:namespace/_check",
+  checkRestrictedUUID,
+  writeAuthMiddleware,
+  errors.catchAsync(async (req, res) => {
+    const device = res.locals.device;
+    if (!device) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: "设备不存在",
+      });
+    }
+    res.json({
+      status: 'success',
+      uuid: device.uuid,
+      name: device.name,
+      accessType: device.accessType,
+      hasPassword: !!device.password,
+    });
   })
 );
 
@@ -46,13 +78,13 @@ router.get(
 router.post(
   "/:namespace/_password",
   writeAuthMiddleware,
-  errors.catchAsync(async (req, res) => {
+  errors.catchAsync(async (req, res, next) => {
     const { newPassword, oldPassword } = req.body;
-    const { device } = req;
+    const device = res.locals.device;
 
     try {
       if (device.password && oldPassword !== device.password) {
-        return res.status(401).json({ error: "Invalid old password" });
+        return next(errors.createError(500, "密码错误"));
       }
 
       await prisma.device.update({
@@ -60,10 +92,9 @@ router.post(
         data: { password: newPassword },
       });
 
-      res.json({ message: "Password updated successfully" });
+      res.json({ message: "密码已成功修改" });
     } catch (error) {
-      console.error("Error updating password:", error);
-      res.status(500).json({ error: "Internal server error" });
+      return next(errors.createError(500, "无法修改密码"));
     }
   })
 );
@@ -74,27 +105,38 @@ router.put(
   writeAuthMiddleware,
   errors.catchAsync(async (req, res) => {
     const { name, accessType } = req.body;
-    const { device } = req;
+    const device = res.locals.device;
 
-    try {
-      const updatedDevice = await prisma.device.update({
-        where: { uuid: device.uuid },
-        data: {
-          name: name || device.name,
-          accessType: accessType || device.accessType,
-        },
+    // 验证 accessType
+    if (accessType && !VALID_ACCESS_TYPES.includes(accessType)) {
+      return res.status(400).json({
+        error: `Invalid access type. Must be one of: ${VALID_ACCESS_TYPES.join(", ")}`,
       });
-
-      res.json({
-        uuid: updatedDevice.uuid,
-        name: updatedDevice.name,
-        accessType: updatedDevice.accessType,
-        hasPassword: !!updatedDevice.password,
-      });
-    } catch (error) {
-      console.error("Error updating device info:", error);
-      res.status(500).json({ error: "Internal server error" });
     }
+
+    const updatedDevice = await prisma.device.update({
+      where: { uuid: device.uuid },
+      data: {
+        name: name || device.name,
+        accessType: accessType || device.accessType,
+      },
+    });
+
+    res.json({
+      uuid: updatedDevice.uuid,
+      name: updatedDevice.name,
+      accessType: updatedDevice.accessType,
+      hasPassword: !!updatedDevice.password,
+    });
+  })
+);
+
+// Remove device password
+router.delete(
+  "/:namespace/_password",
+  removePasswordMiddleware,
+  errors.catchAsync(async (req, res) => {
+    res.json({ message: "密码已成功移除" });
   })
 );
 
