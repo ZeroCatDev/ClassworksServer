@@ -9,7 +9,15 @@ import {
   readAuthMiddleware,
   writeAuthMiddleware,
   removePasswordMiddleware,
+  authMiddleware,
+  deviceInfoMiddleware
 } from "../middleware/auth.js";
+import {
+  DecodeAndhashPassword,
+  DecodeAndVerifyPassword,
+  hashPassword,
+  verifyPassword,
+} from "../utils/crypto.js";
 
 const prisma = new PrismaClient();
 
@@ -55,7 +63,7 @@ router.get(
 router.get(
   "/:namespace/_check",
   checkRestrictedUUID,
-  writeAuthMiddleware,
+  deviceInfoMiddleware,
   errors.catchAsync(async (req, res) => {
     const device = res.locals.device;
     if (!device) {
@@ -65,11 +73,88 @@ router.get(
       });
     }
     res.json({
-      status: 'success',
+      status: "success",
       uuid: device.uuid,
       name: device.name,
       accessType: device.accessType,
       hasPassword: !!device.password,
+    });
+  })
+);
+
+// Get device info
+router.post(
+  "/:namespace/_checkpassword",
+  checkRestrictedUUID,
+  deviceInfoMiddleware,
+  errors.catchAsync(async (req, res) => {
+    const { password } = req.body;
+    const device = res.locals.device;
+    if (!device) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: "设备不存在",
+      });
+    }
+    const isPasswordValid = await verifyPassword(password, device.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        statusCode: 401,
+        message: "密码错误",
+      });
+    }
+    res.json({
+      status: "success",
+      uuid: device.uuid,
+      name: device.name,
+      accessType: device.accessType,
+      hasPassword: !!device.password,
+    });
+  })
+);
+// Get password hint
+router.get(
+  "/:namespace/_hint",
+  checkRestrictedUUID,
+  errors.catchAsync(async (req, res) => {
+    const { namespace } = req.params;
+
+    const device = await prisma.device.findUnique({
+      where: { uuid: namespace },
+      select: { passwordHint: true },
+    });
+
+    if (!device) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: "设备不存在",
+      });
+    }
+
+    res.json({
+      passwordHint: device.passwordHint || null,
+    });
+  })
+);
+
+// Update password hint
+router.put(
+  "/:namespace/_hint",
+  checkRestrictedUUID,
+  writeAuthMiddleware,
+  errors.catchAsync(async (req, res) => {
+    const { hint } = req.body;
+    const device = res.locals.device;
+
+    const updatedDevice = await prisma.device.update({
+      where: { uuid: device.uuid },
+      data: { passwordHint: hint },
+      select: { passwordHint: true },
+    });
+
+    res.json({
+      message: "密码提示已更新",
+      passwordHint: updatedDevice.passwordHint,
     });
   })
 );
@@ -79,17 +164,30 @@ router.post(
   "/:namespace/_password",
   writeAuthMiddleware,
   errors.catchAsync(async (req, res, next) => {
-    const { newPassword, oldPassword } = req.body;
+    const { password, oldPassword } = req.body;
     const device = res.locals.device;
 
     try {
-      if (device.password && oldPassword !== device.password) {
+      // 验证旧密码
+      if (
+        device.password &&
+        !(await verifyPassword(oldPassword, device.password))
+      ) {
         return next(errors.createError(500, "密码错误"));
+      }
+
+      // 对新密码进行哈希处理
+      const hashedPassword = await hashPassword(password);
+      if (!hashedPassword) {
+        return next(errors.createError(400, "新密码格式无效"));
       }
 
       await prisma.device.update({
         where: { uuid: device.uuid },
-        data: { password: newPassword },
+        data: {
+          password: hashedPassword,
+          accessType: VALID_ACCESS_TYPES[1], // 设置密码时默认为受保护模式
+        },
       });
 
       res.json({ message: "密码已成功修改" });
@@ -110,7 +208,9 @@ router.put(
     // 验证 accessType
     if (accessType && !VALID_ACCESS_TYPES.includes(accessType)) {
       return res.status(400).json({
-        error: `Invalid access type. Must be one of: ${VALID_ACCESS_TYPES.join(", ")}`,
+        error: `Invalid access type. Must be one of: ${VALID_ACCESS_TYPES.join(
+          ", "
+        )}`,
       });
     }
 

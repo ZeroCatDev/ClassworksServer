@@ -1,6 +1,8 @@
 import { siteKey } from "../config.js";
 import AppError from "../utils/errors.js";
 import { PrismaClient } from "@prisma/client";
+import { DecodeAndVerifyPassword, verifySiteKey } from "../utils/crypto.js";
+
 const prisma = new PrismaClient();
 
 export const ACCESS_TYPES = {
@@ -16,7 +18,8 @@ export const checkSiteKey = (req, res, next) => {
 
   const providedKey =
     req.headers["x-site-key"] || req.query.sitekey || req.body?.sitekey;
-  if (!providedKey || providedKey !== siteKey) {
+
+  if (!verifySiteKey(providedKey, siteKey)) {
     return res.status(401).json({
       statusCode: 401,
       message: "此服务器已开启站点密钥验证，请提供有效的站点密钥",
@@ -42,7 +45,6 @@ async function getOrCreateDevice(uuid, className) {
           },
         });
       } catch (error) {
-        // 如果是唯一约束错误（并发创建），重新获取设备
         if (error.code === "P2002") {
           device = await prisma.device.findUnique({
             where: { uuid },
@@ -53,7 +55,6 @@ async function getOrCreateDevice(uuid, className) {
       }
     }
 
-    // 如果设备没有密码，自动设为public
     if (
       device &&
       !device.password &&
@@ -72,6 +73,22 @@ async function getOrCreateDevice(uuid, className) {
   }
 }
 
+export const deviceInfoMiddleware = async (req, res, next) => {
+  const { namespace } = req.params;
+
+  try {
+    const device = await getOrCreateDevice(namespace, req.body?.className);
+    res.locals.device = device;
+
+    next();
+  } catch (error) {
+    console.error("Auth middleware error:", error);
+    res.status(500).json({
+      statusCode: 500,
+      message: "服务器内部错误",
+    });
+  }
+};
 export const authMiddleware = async (req, res, next) => {
   const { namespace } = req.params;
   const password =
@@ -81,7 +98,7 @@ export const authMiddleware = async (req, res, next) => {
 
   try {
     const device = await getOrCreateDevice(namespace, req.body?.className);
-    req.device = device;
+    res.locals.device = device;
 
     if (device.password && password !== device.password) {
       return res.status(401).json({
@@ -111,13 +128,16 @@ export const readAuthMiddleware = async (req, res, next) => {
     const device = await getOrCreateDevice(namespace);
     res.locals.device = device;
 
-    // PUBLIC and PROTECTED devices are always readable
-    if ([ACCESS_TYPES.PUBLIC, ACCESS_TYPES.PROTECTED].includes(device.accessType)) {
+    if (
+      [ACCESS_TYPES.PUBLIC, ACCESS_TYPES.PROTECTED].includes(device.accessType)
+    ) {
       return next();
     }
 
-    // For PRIVATE devices, require password
-    if (!device.password || password !== device.password) {
+    if (
+      !device.password ||
+      !(await DecodeAndVerifyPassword(password, device.password))
+    ) {
       return res.status(401).json({
         statusCode: 401,
         message: "设备密码验证失败",
@@ -145,13 +165,14 @@ export const writeAuthMiddleware = async (req, res, next) => {
     const device = await getOrCreateDevice(namespace);
     res.locals.device = device;
 
-    // PUBLIC devices are always writable
     if (device.accessType === ACCESS_TYPES.PUBLIC) {
       return next();
     }
 
-    // For PROTECTED and PRIVATE devices, require password
-    if (!device.password || password !== device.password) {
+    if (
+      !device.password ||
+      !(await DecodeAndVerifyPassword(password, device.password))
+    ) {
       return res.status(401).json({
         statusCode: 401,
         message: "设备密码验证失败",
@@ -179,38 +200,34 @@ export const removePasswordMiddleware = async (req, res, next) => {
 
   try {
     const device = await getOrCreateDevice(namespace);
-    req.device = device;
+    res.locals.device = device;
 
-    // 验证站点令牌（如果设置了的话）
-    if (siteKey && (!providedKey || providedKey !== siteKey)) {
+    if (!verifySiteKey(providedKey, siteKey)) {
       return res.status(401).json({
         statusCode: 401,
         message: "此服务器已开启站点密钥验证，请提供有效的站点密钥",
       });
     }
 
-    // 验证设备密码
-    if (device.password) {
-      if (!password || password !== device.password) {
-        return res.status(401).json({
-          statusCode: 401,
-          message: "设备密码验证失败",
-        });
-      }
-    } else {
-      return res.status(400).json({
-        statusCode: 400,
-        message: "设备当前没有设置密码",
+    if (
+      device.password &&
+      !(await DecodeAndVerifyPassword(password, device.password))
+    ) {
+      return res.status(401).json({
+        statusCode: 401,
+        message: "设备密码验证失败",
       });
     }
 
-    // 更新设备，移除密码
     await prisma.device.update({
-      where: { uuid: namespace },
-      data: { password: null },
+      where: { uuid: device.uuid },
+      data: {
+        password: null,
+        accessType: ACCESS_TYPES.PUBLIC,
+      },
     });
 
-    res.json({ message: "密码已成功移除" });
+    next();
   } catch (error) {
     console.error("Remove password middleware error:", error);
     res.status(500).json({

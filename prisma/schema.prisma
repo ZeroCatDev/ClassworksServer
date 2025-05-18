@@ -27,6 +27,7 @@ model KVStore {
 model Device {
   uuid       String     @id @db.Char(36)
   password   String?
+  passwordHint String?
   name       String?
   accessType AccessType @default(PUBLIC)
   createdAt  DateTime   @default(now())
