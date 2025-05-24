@@ -33,14 +33,30 @@ function setupDatabase() {
       process.exit(1);
     }
 
-    // 将所有配置文件复制到 prisma 根目录下
-    const files = fs.readdirSync(sourceDir);
-    for (const file of files) {
-      const sourcePath = path.join(sourceDir, file);
-      const targetPath = path.join(PRISMA_DIR, file);
-      fs.copyFileSync(sourcePath, targetPath);
+    // 递归复制函数
+    function copyRecursive(src, dest) {
+      const stats = fs.statSync(src);
+      if (stats.isDirectory()) {
+        if (!fs.existsSync(dest)) {
+          fs.mkdirSync(dest, { recursive: true });
+        }
+        const entries = fs.readdirSync(src);
+        for (const entry of entries) {
+          copyRecursive(path.join(src, entry), path.join(dest, entry));
+        }
+      } else {
+        fs.copyFileSync(src, dest);
+      }
     }
-    console.log(`✅ 已复制 ${DATABASE_TYPE} 数据库配置文件`);
+
+    // 将所有配置文件和目录复制到 prisma 根目录下
+    const entries = fs.readdirSync(sourceDir);
+    for (const entry of entries) {
+      const sourcePath = path.join(sourceDir, entry);
+      const targetPath = path.join(PRISMA_DIR, entry);
+      copyRecursive(sourcePath, targetPath);
+    }
+    console.log(`✅ 已复制 ${DATABASE_TYPE} 数据库配置文件和目录`);
 
     // 设置 Prisma 的 DATABASE_URL
     process.env.DATABASE_URL = DATABASE_URL;
