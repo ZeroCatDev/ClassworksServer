@@ -13,5 +13,5 @@ services:
       - DATABASE_TYPE=sqlite
       - DATABASE_URL=
     volumes:
-      - cs-data:/data
+      - .data:/app/data
 

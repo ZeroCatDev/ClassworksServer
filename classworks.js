@@ -44,6 +44,13 @@ function setupDatabase() {
 
     // 设置 Prisma 的 DATABASE_URL
     process.env.DATABASE_URL = DATABASE_URL;
+
+    // 检查数据库表并执行必要的迁移
+    execSync(
+      "npx prisma migrate dev --name update-" +
+        new Date().toISOString().split("T")[0],
+      { stdio: "inherit" }
+    );
   } catch (error) {
     console.error("❌ 数据库初始化失败:", error.message);
     process.exit(1);
@@ -53,7 +60,7 @@ function setupDatabase() {
 // 🔨 本地构建函数
 function buildLocal() {
   try {
-    execSync("npm install", { stdio: "inherit" });      // 安装依赖
+    execSync("npm install", { stdio: "inherit" }); // 安装依赖
     execSync("npx prisma generate", { stdio: "inherit" }); // 生成 Prisma 客户端
     console.log("✅ 构建完成");
   } catch (error) {
