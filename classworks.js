@@ -46,11 +46,7 @@ function setupDatabase() {
     process.env.DATABASE_URL = DATABASE_URL;
 
     // 检查数据库表并执行必要的迁移
-    execSync(
-      "npx prisma migrate dev --name update-" +
-        new Date().toISOString().split("T")[0],
-      { stdio: "inherit" }
-    );
+    execSync("npx prisma migrate deploy", { stdio: "inherit" });
   } catch (error) {
     console.error("❌ 数据库初始化失败:", error.message);
     process.exit(1);
