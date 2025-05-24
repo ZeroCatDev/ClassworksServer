@@ -44,7 +44,7 @@ jobs:
             type=sha,suffix=-${{ matrix.database }}
             type=raw,value=${{ matrix.database }},enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
           flavor: |
-            latest=false
+            latest=${{ github.ref == format('refs/heads/{0}', 'main') && matrix.database == 'sqlite' }}
 
       - name: Build and push Docker images
         uses: docker/build-push-action@v5
