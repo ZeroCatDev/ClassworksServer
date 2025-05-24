@@ -8,9 +8,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  MYSQL_IMAGE_NAME: ZeroCatDev/classworks-mysql
-  POSTGRES_IMAGE_NAME: ZeroCatDev/classworks-postgres
-  SQLITE_IMAGE_NAME: ZeroCatDev/classworks-sqlite
+  MYSQL_IMAGE_NAME: zerocatdev/classworks-mysql
+  POSTGRES_IMAGE_NAME: zerocatdev/classworks-postgres
+  SQLITE_IMAGE_NAME: zerocatdev/classworks-sqlite
 
 jobs:
   build-and-push:
