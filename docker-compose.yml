@@ -1,70 +1,17 @@
 version: '3.8'
 
 services:
-  app-mysql:
+  app:
     build:
       context: .
-      args:
-        DATABASE_TYPE: mysql
+      dockerfile: Dockerfile
+    container_name: classworks
+    ports:
+      - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=mysql://user:password@mysql:3306/classworks
-    depends_on:
-      mysql:
-        condition: service_healthy
-
-  app-postgres:
-    build:
-      context: .
-      args:
-        DATABASE_TYPE: postgres
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://user:password@postgres:5432/classworks
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  app-sqlite:
-    build:
-      context: .
-      args:
-        DATABASE_TYPE: sqlite
-    environment:
-      - NODE_ENV=production
+      - DATABASE_TYPE=sqlite
+      - DATABASE_URL=
     volumes:
-      - sqlite_data:/data
+      - cs-data:/data
 
-  mysql:
-    image: mysql:8
-    environment:
-      - MYSQL_DATABASE=classworks
-      - MYSQL_USER=user
-      - MYSQL_PASSWORD=password
-      - MYSQL_ROOT_PASSWORD=rootpassword
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_DB=classworks
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d classworks"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-volumes:
-  mysql_data:
-  postgres_data:
-  sqlite_data:

@@ -1,24 +1,25 @@
 FROM node:alpine
 
-# Required build argument for database type
-ARG DATABASE_TYPE
+WORKDIR /app
 
-# Set production environment
-ENV NODE_ENV=production \
-    DATABASE_TYPE=${DATABASE_TYPE}
+# Set production environment by default
+ENV NODE_ENV=production
 
-# Copy all application files
 COPY . .
 
-# Copy specific database files based on DATABASE_TYPE and clean up
-RUN cp -r /prisma/database/${DATABASE_TYPE}/* /prisma/ && \
-    rm -rf /prisma/database
+# Install dependencies
+RUN npm install
 
-# Install dependencies and generate Prisma client
-RUN npm install && \
-    npx prisma generate
+# Copy all application files
+
+
+# Make the management script executable
+RUN chmod +x classworks.js
 
 EXPOSE 3000
 
-# Run different commands based on DATABASE_TYPE
-CMD ["sh", "-c", "if [ \"$DATABASE_TYPE\" = \"sqlite\" ]; then (if [ ! -f /data/db.db ]; then npx prisma migrate dev --name init; else npx prisma migrate deploy; fi); else npx prisma migrate deploy; fi && npx prisma generate && npm run start"]
+# Use the management script as entrypoint
+ENTRYPOINT ["node", "classworks.js"]
+
+# Default command (can be overridden)
+CMD []
