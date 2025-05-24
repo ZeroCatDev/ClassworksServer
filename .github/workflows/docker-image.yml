@@ -5,10 +5,14 @@ on:
     branches:
       - main
   workflow_dispatch:
+
 jobs:
   build_and_push:
     name: Build and Push
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        database: [mysql, postgres, sqlite]
     permissions:
       packages: write
       contents: read
@@ -29,7 +33,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
@@ -38,14 +41,17 @@ jobs:
             sunwuyuan/classworks
             ghcr.io/ZeroCatDev/ClassworksServer
           tags: |
-            type=sha
+            type=sha,suffix=-${{ matrix.database }}
+            type=raw,value=${{ matrix.database }},enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
           flavor: |
-            latest=true
+            latest=false
 
       - name: Build and push Docker images
         uses: docker/build-push-action@v5
         with:
           context: .
+          build-args: |
+            DATABASE_TYPE=${{ matrix.database }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

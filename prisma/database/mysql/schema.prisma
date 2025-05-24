@@ -3,9 +3,10 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:../data/db.db"
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
+
 
 enum AccessType {
   PUBLIC // No password required for read/write

@@ -5,14 +5,13 @@
  */
 
 import app from '../app.js';
-import debug from 'debug';
 import { createServer } from 'http';
 
 /**
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || "3030");
+var port = normalizePort(process.env.PORT || "3000");
 app.set("port", port);
 
 /**
@@ -83,8 +82,5 @@ function onError(error) {
 
 function onListening() {
   var addr = server.address();
-  var bind = typeof addr === 'string'
-    ? 'pipe ' + addr
-    : "port " + addr.port;
-  debug("Listening on " + bind);
+  console.log("可以在 http://localhost:"+addr.port+" 访问");
 }

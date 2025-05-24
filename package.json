@@ -7,7 +7,6 @@
     "prisma": "prisma generate",
     "prisma:pull": "prisma db pull",
     "dev": "NODE_ENV=development nodemon node .bin/www",
-    "setup": "node ./scripts/setup.js",
     "test:rate-limit": "node ./scripts/test-rate-limit.js",
     "test:stress": "node ./scripts/stress-test.js",
     "test:distributed": "node ./scripts/distributed-test.js",

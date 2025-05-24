@@ -9,15 +9,9 @@ import {
   readAuthMiddleware,
   writeAuthMiddleware,
   removePasswordMiddleware,
-  authMiddleware,
-  deviceInfoMiddleware
+  deviceInfoMiddleware,
 } from "../middleware/auth.js";
-import {
-  DecodeAndhashPassword,
-  DecodeAndVerifyPassword,
-  hashPassword,
-  verifyPassword,
-} from "../utils/crypto.js";
+import { hashPassword, verifyPassword } from "../utils/crypto.js";
 
 const prisma = new PrismaClient();
 
@@ -333,40 +327,6 @@ router.get(
     return res.json(metadata);
   })
 );
-/**
- * POST /:namespace/:key
- * 更新指定命名空间下的键值，如果不存在则创建
- */
-router.post(
-  "/:namespace/:key",
-  checkRestrictedUUID,
-  writeAuthMiddleware,
-  errors.catchAsync(async (req, res, next) => {
-    const { namespace, key } = req.params;
-    const value = req.body;
-
-    if (!value || Object.keys(value).length === 0) {
-      // 创建并传递错误，而不是抛出
-      return next(errors.createError(400, "请提供有效的JSON值"));
-    }
-
-    // 获取客户端IP
-    const creatorIp =
-      req.headers["x-forwarded-for"] ||
-      req.connection.remoteAddress ||
-      req.socket.remoteAddress ||
-      req.connection.socket?.remoteAddress ||
-      "";
-
-    const result = await kvStore.upsert(namespace, key, value, creatorIp);
-    return res.status(200).json({
-      namespace: result.namespace,
-      key: result.key,
-      created: result.createdAt.getTime() === result.updatedAt.getTime(),
-      updatedAt: result.updatedAt,
-    });
-  })
-);
 
 /**
  * POST /:namespace/batch-import
@@ -425,6 +385,41 @@ router.post(
     });
   })
 );
+/**
+ * POST /:namespace/:key
+ * 更新指定命名空间下的键值，如果不存在则创建
+ */
+router.post(
+  "/:namespace/:key",
+  checkRestrictedUUID,
+  writeAuthMiddleware,
+  errors.catchAsync(async (req, res, next) => {
+    const { namespace, key } = req.params;
+    const value = req.body;
+
+    if (!value || Object.keys(value).length === 0) {
+      // 创建并传递错误，而不是抛出
+      return next(errors.createError(400, "请提供有效的JSON值"));
+    }
+
+    // 获取客户端IP
+    const creatorIp =
+      req.headers["x-forwarded-for"] ||
+      req.connection.remoteAddress ||
+      req.socket.remoteAddress ||
+      req.connection.socket?.remoteAddress ||
+      "";
+
+    const result = await kvStore.upsert(namespace, key, value, creatorIp);
+    return res.status(200).json({
+      namespace: result.namespace,
+      key: result.key,
+      created: result.createdAt.getTime() === result.updatedAt.getTime(),
+      updatedAt: result.updatedAt,
+    });
+  })
+);
+
 /**
  * DELETE /:namespace
  * 删除指定命名空间及其所有键值对

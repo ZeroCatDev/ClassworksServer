@@ -86,7 +86,7 @@
   <script>
     document.getElementById('generateUUID').addEventListener('click', async function() {
       try {
-        const response = await fetch('/uuid', {
+        const response = await fetch('/_uuid', {
           method: 'GET'
         });
         const data = await response.json();
@@ -110,7 +110,7 @@
       }
 
       try {
-        const response = await fetch(`/${namespace}/batch-import`, {
+        const response = await fetch(`/${namespace}/_batchimport`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

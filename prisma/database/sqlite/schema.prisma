@@ -7,6 +7,7 @@ datasource db {
   url      = "file:../data/db.db"
 }
 
+
 enum AccessType {
   PUBLIC // No password required for read/write
   PROTECTED // No password for read, password for write
@@ -32,4 +33,5 @@ model Device {
   accessType   AccessType @default(PUBLIC)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  test         String?
 }
