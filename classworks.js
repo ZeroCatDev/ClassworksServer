@@ -7,93 +7,99 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const PRISMA_DIR = path.join(process.cwd(), "prisma");
-const DATABASE_TYPE = process.env.DATABASE_TYPE || "postgres";
+const DATABASE_TYPE = process.env.DATABASE_TYPE || "sqlite";
 const DATABASE_URL =
   DATABASE_TYPE === "sqlite"
     ? "file:/data/db.sqlite"
     : process.env.DATABASE_URL;
 
+// 🧱 数据库初始化函数
 function setupDatabase() {
   try {
-    // Create data directory for SQLite if needed
+    // 如果是 SQLite，确保 /data 目录存在
     if (DATABASE_TYPE === "sqlite") {
       if (!fs.existsSync("/data")) {
         fs.mkdirSync("/data", { recursive: true });
       }
     } else if (!DATABASE_URL) {
-      console.error("❌ DATABASE_URL is required for non-SQLite databases");
+      console.error("❌ 缺少 DATABASE_URL 环境变量");
       process.exit(1);
     }
 
-    // Copy files from database type directory
+    // 从对应数据库类型的配置目录中复制配置文件
     const sourceDir = path.join(PRISMA_DIR, "database", DATABASE_TYPE);
     if (!fs.existsSync(sourceDir)) {
-      console.error(`❌ Database configuration not found at ${sourceDir}`);
+      console.error(`❌ 数据库配置未找到：${sourceDir}`);
       process.exit(1);
     }
 
-    // Read all files from source directory
+    // 将所有配置文件复制到 prisma 根目录下
     const files = fs.readdirSync(sourceDir);
     for (const file of files) {
       const sourcePath = path.join(sourceDir, file);
       const targetPath = path.join(PRISMA_DIR, file);
       fs.copyFileSync(sourcePath, targetPath);
     }
-    console.log(`✅ Copied ${DATABASE_TYPE} database configuration files`);
+    console.log(`✅ 已复制 ${DATABASE_TYPE} 数据库配置文件`);
 
-    // Set DATABASE_URL for Prisma
+    // 设置 Prisma 的 DATABASE_URL
     process.env.DATABASE_URL = DATABASE_URL;
   } catch (error) {
-    console.error("❌ Database setup failed:", error.message);
+    console.error("❌ 数据库初始化失败:", error.message);
     process.exit(1);
   }
 }
 
+// 🔨 本地构建函数
 function buildLocal() {
   try {
-    execSync("npm install", { stdio: "inherit" });
-    execSync("npx prisma generate", { stdio: "inherit" });
-    console.log("✅ Build completed");
+    execSync("npm install", { stdio: "inherit" });      // 安装依赖
+    execSync("npx prisma generate", { stdio: "inherit" }); // 生成 Prisma 客户端
+    console.log("✅ 构建完成");
   } catch (error) {
-    console.error("❌ Build failed:", error.message);
+    console.error("❌ 构建失败:", error.message);
     process.exit(1);
   }
 }
 
+// 🚀 启动服务函数
 function startServer() {
   try {
-    console.log(`🚀 Starting server with ${DATABASE_TYPE} database...`);
-    execSync("npm run start", { stdio: "inherit" });
+    console.log(`🚀 使用 ${DATABASE_TYPE} 数据库启动服务中...`);
+    execSync("npm run start", { stdio: "inherit" }); // 启动项目
   } catch (error) {
-    console.error("❌ Server start failed:", error.message);
+    console.error("❌ 服务启动失败:", error.message);
     process.exit(1);
   }
 }
 
+// ▶️ 执行 Prisma CLI 命令函数
 function runPrismaCommand(args) {
   try {
     const command = `npx prisma ${args.join(" ")}`;
     execSync(command, { stdio: "inherit" });
   } catch (error) {
-    console.error("❌ Prisma command failed:", error.message);
+    console.error("❌ Prisma 命令执行失败:", error.message);
     process.exit(1);
   }
 }
 
+// 🧠 主函数，根据命令行参数判断执行哪种流程
 async function main() {
-  const args = process.argv.slice(2);
+  const args = process.argv.slice(2); // 获取命令行参数
   if (args[0] === "prisma") {
-    // Run Prisma command
+    // 如果输入的是 prisma 命令，则执行 prisma 子命令
     runPrismaCommand(args.slice(1));
   } else {
-    // Setup environment and database
+    // 否则按默认流程：初始化 → 构建 → 启动服务
     setupDatabase();
     buildLocal();
     startServer();
   }
 }
 
+// 🚨 捕捉主函数异常
 main().catch((error) => {
-  console.error("❌ Script failed:", error);
+  console.error("❌ 脚本执行失败:", error);
   process.exit(1);
 });
