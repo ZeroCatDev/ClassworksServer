@@ -33,5 +33,4 @@ model Device {
   accessType   AccessType @default(PUBLIC)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
-  test         String?
 }

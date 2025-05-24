@@ -1,9 +1,36 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/postgres/client"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+
+enum AccessType {
+  PUBLIC // No password required for read/write
+  PROTECTED // No password for read, password for write
+  PRIVATE // Password required for read/write
+}
+
+model KVStore {
+  namespace String
+  key       String
+  value     Json
+  creatorIp String?  @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([namespace, key])
+}
+
+model Device {
+  uuid         String     @id
+  password     String?
+  passwordHint String?
+  name         String?
+  accessType   AccessType @default(PUBLIC)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
