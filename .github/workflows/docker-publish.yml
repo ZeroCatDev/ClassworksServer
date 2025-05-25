@@ -2,10 +2,10 @@ name: Docker Build and Push
 
 on:
   push:
-    branches: [ "main", "develop" ]
-    tags: [ "v*.*.*" ]
+    branches: ["main"]
+    tags: ["v*.*.*"]
   pull_request:
-    branches: [ "main", "develop" ]
+    branches: ["main"]
   workflow_dispatch:
 
 env:
@@ -26,9 +26,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Show generated image tags
-        run: echo "${{ steps.meta.outputs.tags }}"
 
       - name: Log in to Container registry
         if: github.event_name != 'pull_request'
@@ -53,6 +50,8 @@ jobs:
           flavor: |
             latest=auto
 
+      - name: Show generated image tags
+        run: echo "${{ steps.meta.outputs.tags }}"
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
