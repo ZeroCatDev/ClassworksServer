@@ -1,6 +1,6 @@
 import { Router } from "express";
 const router = Router();
-import kvStore from "../models/kvStore.js";
+import kvStore from "../utils/kvStore.js";
 import { checkSiteKey } from "../middleware/auth.js";
 import { v4 as uuidv4 } from "uuid";
 import errors from "../utils/errors.js";

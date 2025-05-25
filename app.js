@@ -1,4 +1,4 @@
-import "./instrumentation.js";
+import "./utils/instrumentation.js";
 // import createError from "http-errors";
 import express from "express";
 import { join, dirname } from "path";

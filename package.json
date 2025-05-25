@@ -7,10 +7,7 @@
     "prisma": "prisma generate",
     "prisma:pull": "prisma db pull",
     "dev": "NODE_ENV=development nodemon node .bin/www",
-    "test:rate-limit": "node ./scripts/test-rate-limit.js",
-    "test:stress": "node ./scripts/stress-test.js",
-    "test:distributed": "node ./scripts/distributed-test.js",
-    "test:all-limits": "node ./scripts/run-all-tests.js"
+    "migrate": "node ./scripts/batchMigrate.js"
   },
   "type": "module",
   "dependencies": {

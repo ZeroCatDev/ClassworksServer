@@ -1,4 +1,4 @@
-import kvStore from "../models/kvStore.js";
+import kvStore from "./kvStore.js";
 
 // 存储 readme 值的内存变量
 let readmeValue = null;

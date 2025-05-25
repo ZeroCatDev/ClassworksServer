@@ -1,4 +1,4 @@
-import { isDevelopment } from "../config.js";
+import { isDevelopment } from "../utils/config.js";
 
 const errorHandler = (err, req, res, next) => {
   // 判断响应是否已经发送

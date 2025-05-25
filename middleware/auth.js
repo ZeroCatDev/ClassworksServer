@@ -1,5 +1,4 @@
-import { siteKey } from "../config.js";
-import AppError from "../utils/errors.js";
+import { siteKey } from "../utils/config.js";
 import { PrismaClient } from "@prisma/client";
 import { DecodeAndVerifyPassword, verifySiteKey } from "../utils/crypto.js";
 
