@@ -13,6 +13,18 @@ const DATABASE_URL =
     ? "file:/data/db.sqlite"
     : process.env.DATABASE_URL;
 
+// 🔄 执行数据库迁移函数
+function runDatabaseMigration() {
+  try {
+    console.log("🔄 执行数据库迁移...");
+    execSync("npx prisma migrate deploy", { stdio: "inherit" });
+    console.log("✅ 数据库迁移完成");
+  } catch (error) {
+    console.error("❌ 数据库迁移失败:", error.message);
+    process.exit(1);
+  }
+}
+
 // 🧱 数据库初始化函数
 function setupDatabase() {
   try {
@@ -58,11 +70,8 @@ function setupDatabase() {
     }
     console.log(`✅ 已复制 ${DATABASE_TYPE} 数据库配置文件和目录`);
 
-    // 设置 Prisma 的 DATABASE_URL
-    process.env.DATABASE_URL = DATABASE_URL;
-
-    // 检查数据库表并执行必要的迁移
-    execSync("npx prisma migrate deploy", { stdio: "inherit" });
+    // 执行数据库迁移
+    runDatabaseMigration();
   } catch (error) {
     console.error("❌ 数据库初始化失败:", error.message);
     process.exit(1);
@@ -72,6 +81,8 @@ function setupDatabase() {
 // 🔨 本地构建函数
 function buildLocal() {
   try {
+    // 确保数据库迁移已执行
+    runDatabaseMigration();
     execSync("npm install", { stdio: "inherit" }); // 安装依赖
     execSync("npx prisma generate", { stdio: "inherit" }); // 生成 Prisma 客户端
     console.log("✅ 构建完成");
