@@ -12,7 +12,9 @@ env:
   REGISTRY: ghcr.io
   OWNER: zerocatdev
   PROJECT_NAME: classworks
-
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
