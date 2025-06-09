@@ -27,8 +27,8 @@ importers:
         specifier: ^1.34.0
         version: 1.34.0
       '@prisma/client':
-        specifier: 6.8.2
-        version: 6.8.2(prisma@6.8.2)
+        specifier: 6.9.0
+        version: 6.9.0(prisma@6.8.2)
       axios:
         specifier: ^1.9.0
         version: 1.9.0(debug@4.4.1)
@@ -557,8 +557,8 @@ packages:
     peerDependencies:
       '@opentelemetry/api': ^1.1.0
 
-  '@prisma/client@6.8.2':
-    resolution: {integrity: sha512-5II+vbyzv4si6Yunwgkj0qT/iY0zyspttoDrL3R4BYgLdp42/d2C8xdi9vqkrYtKt9H32oFIukvyw3Koz5JoDg==}
+  '@prisma/client@6.9.0':
+    resolution: {integrity: sha512-Gg7j1hwy3SgF1KHrh0PZsYvAaykeR0PaxusnLXydehS96voYCGt1U5zVR31NIouYc63hWzidcrir1a7AIyCsNQ==}
     engines: {node: '>=18.18'}
     peerDependencies:
       prisma: '*'
@@ -2006,7 +2006,7 @@ snapshots:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/core': 2.0.0(@opentelemetry/api@1.9.0)
 
-  '@prisma/client@6.8.2(prisma@6.8.2)':
+  '@prisma/client@6.9.0(prisma@6.8.2)':
     optionalDependencies:
       prisma: 6.8.2
 
